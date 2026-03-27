@@ -1,0 +1,36 @@
+name: myteam-backend
+
+services:
+  mongo:
+    image: mongo
+    restart: always
+    env_file:
+      - ../.env
+    networks:
+      - myteam-backend-network
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    env_file:
+      - ../.env
+    networks:
+      - myteam-backend-network
+
+  backend-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    restart: always
+    ports:
+      - 3000:3000
+    env_file:
+      - ../.env
+    depends_on:
+      - mongo
+    networks:
+      - myteam-backend-network
+networks:
+  myteam-backend-network: null

@@ -1,0 +1,50 @@
+node_modules
+dist
+build
+coverage
+
+# environment files
+
+.env
+.env.*
+!.env.example
+
+# logs
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# lock files (optional - usually fine to ignore)
+
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# OS files
+
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+
+.vscode
+.idea
+
+# husky internals
+
+.husky/_
+
+# temporary files
+
+tmp
+temp
+
+# docker (optional)
+
+*.log
+
+# misc
+
+*.tgz
