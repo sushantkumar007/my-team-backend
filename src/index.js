@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config({
-  path: "env",
+  path: "./docker/.env",
 });
 
 import app from "./app.js";
