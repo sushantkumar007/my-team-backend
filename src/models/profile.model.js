@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const requestSchema = new Schema(
+const profileSchema = new Schema(
   {
     email: {
       type: String,
@@ -43,6 +43,6 @@ const requestSchema = new Schema(
   { timestamps: true },
 );
 
-const Request = mongoose.model("Request", requestSchema);
+const Profile = mongoose.model("Profile", profileSchema);
 
-export default Request;
+export default Profile;

@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import { HistoryActionsEnum } from "../utils/constant.js";
 
-const requestSchema = new Schema(
+const historySchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
@@ -28,6 +28,6 @@ const requestSchema = new Schema(
   { timestamps: true },
 );
 
-const Request = mongoose.model("Request", requestSchema);
+const History = mongoose.model("History", historySchema);
 
-export default Request;
+export default History;

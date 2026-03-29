@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import { UserRole, UserRoleEnum } from "../utils/constant.js";
 
-const requestSchema = new mongoose.Schema(
+const groupSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -39,6 +39,6 @@ const requestSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const Request = mongoose.model("Request", requestSchema);
+const Group = mongoose.model("Group", groupSchema);
 
-export default Request;
+export default Group;
