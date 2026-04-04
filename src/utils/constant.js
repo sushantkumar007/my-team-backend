@@ -29,7 +29,12 @@ const HistoryActionsEnum = Object.values(HistoryActions);
 
 export { HistoryActions, HistoryActionsEnum };
 
-const UserRole = {};
+const UserRole = {
+  ADMIN: "admin",
+  USER: "user",
+  GROUP_ADMIN: "group_admin",
+  MEMBER: "member",
+};
 
 const UserRoleEnum = Object.values(UserRole);
 

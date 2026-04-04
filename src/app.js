@@ -6,6 +6,9 @@ import { errorHandler } from "./middlewares/error.middleware.js";
 
 dotenv.config();
 
+// import routes
+import userRouter from "./routes/user.route.js";
+
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
@@ -20,9 +23,8 @@ app.use(
   }),
 );
 
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "Welcome to My Team API" });
-});
+// routes
+app.use("/api/v1/users", userRouter);
 
 // Error handler
 app.use(errorHandler);
