@@ -8,6 +8,8 @@ dotenv.config();
 
 // import routes
 import userRouter from "./routes/user.route.js";
+import profileRouter from "./routes/profile.route.js";
+import groupRouter from "./routes/group.route.js";
 
 const app = express();
 
@@ -25,6 +27,8 @@ app.use(
 
 // routes
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/profiles", profileRouter);
+app.use("/api/v1/groups", groupRouter);
 
 // Error handler
 app.use(errorHandler);
