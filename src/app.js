@@ -2,8 +2,14 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 dotenv.config();
+
+// import routes
+import userRouter from "./routes/user.route.js";
+import profileRouter from "./routes/profile.route.js";
+import groupRouter from "./routes/group.route.js";
 
 const app = express();
 
@@ -19,8 +25,12 @@ app.use(
   }),
 );
 
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "Welcome to My Team API" });
-});
+// routes
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/profiles", profileRouter);
+app.use("/api/v1/groups", groupRouter);
+
+// Error handler
+app.use(errorHandler);
 
 export default app;
