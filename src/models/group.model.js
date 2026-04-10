@@ -19,7 +19,7 @@ const groupSchema = new mongoose.Schema(
         role: {
           type: String,
           enum: UserRoleEnum,
-          default: UserRole,
+          default: UserRole.MEMBER,
         },
         joindAt: {
           type: Date,

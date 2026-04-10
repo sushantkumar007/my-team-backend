@@ -5,6 +5,7 @@ import Group from "../models/group.model.js";
 import Profile from "../models/profile.model.js";
 import History from "../models/history.model.js";
 import User from "../models/user.model.js";
+import Request from "../models/request.model.js";
 import { HistoryActions, RequestStatus, RequestType, UserRole } from "../utils/constant.js";
 
 export const createGroup = asyncHandler(async (req, res) => {
@@ -125,6 +126,11 @@ export const deleteGroup = asyncHandler(async (req, res) => {
   }
 
   const deletedGroup = await Group.deleteOne({ _id: groupId });
+
+  const profile = await Profile.findOne({ user: userId });
+
+  profile.group = undefined;
+  await profile.save();
 
   const history = await History.create({
     user: userId,
@@ -304,7 +310,7 @@ export const rejectJoinRequest = asyncHandler(async (req, res) => {
 
 export const removeMember = asyncHandler(async (req, res) => {
   const { groupId } = req.params;
-  const { _Id: userId } = req.user;
+  const { _id: userId } = req.user;
   const { memberUserId } = req.body;
 
   const group = await Group.findById(groupId);

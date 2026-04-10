@@ -269,16 +269,12 @@ export const approveInvite = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Invite not found");
   }
 
-  if (userId !== invite.user._id.toString()) {
+  if (userId.toString() !== invite.user._id.toString()) {
     throw new ApiError(400, "you are not allowed to perform this action");
   }
 
-  if (invite.status === RequestStatus.ACCEPTED) {
-    throw new ApiError(400, "Request is already accepted");
-  }
-
-  if (invite.status === RequestStatus.REJECTED) {
-    throw new ApiError(400, "Reqeust is already, rejected");
+  if (invite.status !== RequestStatus.PENDING) {
+    throw new ApiError(400, `Request is already ${invite.status.toLowerCase()}`);
   }
 
   const group = await Group.findById(invite.group);
@@ -287,7 +283,7 @@ export const approveInvite = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group not found");
   }
 
-  const profile = await Profile.fineOne({ user: invite.user });
+  const profile = await Profile.findOne({ user: invite.user });
 
   if (!profile) {
     throw new ApiError(404, "Profile not found");
@@ -328,16 +324,12 @@ export const rejectInvite = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Invite not found");
   }
 
-  if (userId !== invite.user.toString()) {
+  if (userId.toString() !== invite.user.toString()) {
     throw new ApiError(400, "you are not allowed to perform this action");
   }
 
-  if (invite.status === RequestStatus.ACCEPTED) {
-    throw new ApiError(400, "Request is already accepted");
-  }
-
-  if (invite.status === RequestStatus.REJECTED) {
-    throw new ApiError(400, "Reqeust is already, rejected");
+  if (invite.status !== RequestStatus.PENDING) {
+    throw new ApiError(400, `Request is already ${invite.status.toLowerCase()}`);
   }
 
   invite.status = RequestStatus.REJECTED;
