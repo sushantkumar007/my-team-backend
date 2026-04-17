@@ -64,3 +64,13 @@ export const isAuthenticated = async (req, res, next) => {
 
   res.status(401).json(new ApiError(401, "Unauthorized: Please log in again"));
 };
+
+export const isAdmin = (req, res, next) => {
+  const { role } = req.user;
+
+  if (role !== "admin") {
+    throw new ApiError(403, "Access denied: Admin only");
+  }
+
+  next();
+};

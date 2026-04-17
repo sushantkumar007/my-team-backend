@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuthenticated } from "../middlewares/auth.middleware.js";
+import { isAdmin, isAuthenticated } from "../middlewares/auth.middleware.js";
 import upload from "../middlewares/multer.middleware.js";
 
 import {
@@ -23,7 +23,7 @@ const profileRouter = Router();
 
 profileRouter
   .route("/upload-csv")
-  .post(isAuthenticated, upload.single("file"), createProfilesFromCsv);
+  .post(isAuthenticated, isAdmin, upload.single("file"), createProfilesFromCsv);
 profileRouter.route("/my-profile").get(isAuthenticated, getMyProfile);
 profileRouter.route("/get-profile/:profileId").get(isAuthenticated, getProfileById);
 profileRouter.route("/get-profiles").get(isAuthenticated, getProfiles);
