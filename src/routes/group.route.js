@@ -20,18 +20,18 @@ import {
 const groupRouter = Router();
 
 groupRouter.route("/create-group").post(isAuthenticated, createGroup);
-groupRouter.route("/my-group/:groupId").get(isAuthenticated, getMyGroup);
-groupRouter.route("/group/:groupId").get(isAuthenticated, getGroupById);
+groupRouter.route("/my-group").get(isAuthenticated, getMyGroup);
+groupRouter.route("/get-group/:groupId").get(isAuthenticated, getGroupById);
 groupRouter.route("/get-groups").get(isAuthenticated, getGroups);
-groupRouter.route("/delete-group/:groupId").get(isAuthenticated, deleteGroup);
-groupRouter.route("/invite-user/:groupId").post(isAuthenticated, invite);
-groupRouter.route("/get-invites/:groupId").get(isAuthenticated, getInvites);
-groupRouter.route("/get-requests/:groupId").get(isAuthenticated, getRequests);
-groupRouter.route("/approve-request/:requestId").get(isAuthenticated, approveJoinRequest);
-groupRouter.route("/reject-request/:requestId").get(isAuthenticated, rejectJoinRequest);
-groupRouter.route("/remove-member/:groupId").post(isAuthenticated, removeMember);
-groupRouter.route("/left-group/:groupId").get(isAuthenticated, leftGroup);
-groupRouter.route("/update-notice/:groupId").post(isAuthenticated, updateNotice);
-groupRouter.route("/group-history/:groupId").get(isAuthenticated, getGroupHistory);
+groupRouter.route("/delete-group").delete(isAuthenticated, deleteGroup);
+groupRouter.route("/invite-user/:profileId").post(isAuthenticated, invite);
+groupRouter.route("/get-invites").get(isAuthenticated, getInvites);
+groupRouter.route("/get-requests").get(isAuthenticated, getRequests);
+groupRouter.route("/approve-request/:requestId").patch(isAuthenticated, approveJoinRequest);
+groupRouter.route("/reject-request/:requestId").patch(isAuthenticated, rejectJoinRequest);
+groupRouter.route("/remove-member/:profileId").delete(isAuthenticated, removeMember);
+groupRouter.route("/left-group").patch(isAuthenticated, leftGroup);
+groupRouter.route("/update-notice").patch(isAuthenticated, updateNotice);
+groupRouter.route("/get-group-history/:groupId").get(isAuthenticated, getGroupHistory);
 
 export default groupRouter;

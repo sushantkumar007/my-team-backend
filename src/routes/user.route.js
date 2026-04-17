@@ -20,8 +20,8 @@ userRouter.route("/login").post(login);
 userRouter.route("/logout").get(isAuthenticated, logout);
 userRouter.route("/me").get(isAuthenticated, getCurrentUser);
 userRouter.route("/resend-email-verification").post(resendEmailVerification);
-userRouter.route("/update-password").post(isAuthenticated, updatePassword);
+userRouter.route("/update-password").patch(isAuthenticated, updatePassword);
 userRouter.route("/reset-password-request").post(resetPasswordRequest);
-userRouter.route("/reset-password/:resetPasswordToken").post(resetPassword);
+userRouter.route("/reset-password/:resetPasswordToken").patch(resetPassword);
 
 export default userRouter;
