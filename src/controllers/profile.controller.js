@@ -43,7 +43,11 @@ export const createProfilesFromCsv = asyncHandler(async (req, res) => {
           profile.courses = userData.courses;
           await profile.save();
         } else {
-          profile = await Profile.create({ email: userData.email, courses: userData.courses });
+          profile = await Profile.create({
+            email: userData.email,
+            courses: userData.courses,
+            username: userData.username,
+          });
         }
 
         profiles.push(profile);
@@ -58,7 +62,7 @@ export const createProfilesFromCsv = asyncHandler(async (req, res) => {
     });
 });
 
-export const getProfile = asyncHandler(async (req, res) => {
+export const getMyProfile = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
 
   const profile = await Profile.findOne({ user: userId });
@@ -214,8 +218,14 @@ export const joinRequest = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group not found");
   }
 
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
   const request = await Request.create({
-    user: userId,
+    profile: profile._id,
     group: groupId,
     requestType: RequestType.JOIN_REQUEST,
     message,
@@ -231,12 +241,16 @@ export const joinRequest = asyncHandler(async (req, res) => {
 export const getRequests = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
 
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
   const request = await Request.find({
-    user: userId,
+    profile: profile._id,
     requestType: RequestType.JOIN_REQUEST,
-  })
-    .populate("group", "name")
-    .populate("user", "name username");
+  }).populate("group", "name");
 
   if (!request) {
     throw new ApiError(404, "No request found");
@@ -248,9 +262,16 @@ export const getRequests = asyncHandler(async (req, res) => {
 export const getInvites = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
 
-  const invites = await Request.findOne({ user: userId, requestType: RequestType.INVITE_REQUEST })
-    .populate("group", "name")
-    .populate("user", "name username");
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  const invites = await Request.findOne({
+    profile: profile._id,
+    requestType: RequestType.INVITE_REQUEST,
+  }).populate("group", "name");
 
   if (!invites) {
     throw new ApiError(404, "No invites found");
@@ -263,13 +284,19 @@ export const approveInvite = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
   const { inviteId } = req.params;
 
-  const invite = await Request.findById(inviteId).populate("user", "name");
+  const invite = await Request.findById(inviteId);
 
   if (!invite) {
     throw new ApiError(404, "Invite not found");
   }
 
-  if (userId.toString() !== invite.user._id.toString()) {
+  const profile = await Profile.findOne({ user: userId }).populate("user", "name");
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (profile._id.toString() !== invite.profile._id.toString()) {
     throw new ApiError(400, "you are not allowed to perform this action");
   }
 
@@ -283,14 +310,8 @@ export const approveInvite = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group not found");
   }
 
-  const profile = await Profile.findOne({ user: invite.user });
-
-  if (!profile) {
-    throw new ApiError(404, "Profile not found");
-  }
-
   group.members.push({
-    user: invite.user._id,
+    profile: profile._id,
   });
   await group.save();
 
@@ -301,10 +322,10 @@ export const approveInvite = asyncHandler(async (req, res) => {
   await invite.save();
 
   const history = await History.create({
-    user: invite.user._id,
+    profile: profile._id,
     group: group._id,
     action: HistoryActions.MEMBER_ADDED,
-    message: `${invite.user.name} join the group ${group.name}`,
+    message: `${profile.user.name} join the group ${group.name}`,
   });
 
   if (!history) {
@@ -324,7 +345,13 @@ export const rejectInvite = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Invite not found");
   }
 
-  if (userId.toString() !== invite.user.toString()) {
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(400, "Profile not found");
+  }
+
+  if (profile._id.toString() !== invite.profile.toString()) {
     throw new ApiError(400, "you are not allowed to perform this action");
   }
 
@@ -341,7 +368,13 @@ export const rejectInvite = asyncHandler(async (req, res) => {
 export const getUserHistory = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
 
-  const history = await History.findOne({ user: userId });
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  const history = await History.findOne({ profile: profile._id });
 
   if (!history) {
     throw new ApiError(404, "No history found");

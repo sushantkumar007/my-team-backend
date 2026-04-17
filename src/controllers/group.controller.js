@@ -4,7 +4,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import Group from "../models/group.model.js";
 import Profile from "../models/profile.model.js";
 import History from "../models/history.model.js";
-import User from "../models/user.model.js";
 import Request from "../models/request.model.js";
 import { HistoryActions, RequestStatus, RequestType, UserRole } from "../utils/constant.js";
 
@@ -18,29 +17,29 @@ export const createGroup = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Group name already exists");
   }
 
-  const group = await Group.create({
-    name: groupName,
-    members: [
-      {
-        user: userId,
-        role: UserRole.GROUP_ADMIN,
-      },
-    ],
-    createdBy: userId,
-  });
-
   const profile = await Profile.findOne({ user: userId });
 
   if (!profile) {
     throw new ApiError(404, "Profile not found");
   }
 
+  const group = await Group.create({
+    name: groupName,
+    members: [
+      {
+        profile: profile._id,
+        role: UserRole.GROUP_ADMIN,
+      },
+    ],
+    createdBy: profile._id,
+  });
+
   profile.group = group._id;
   await profile.save();
 
   const history = await History.create({
     group: group._id,
-    user: userId,
+    profile: profile._id,
     action: HistoryActions.GROUP_CREATED,
     message: `${name} created the group ${groupName}`,
   });
@@ -54,16 +53,25 @@ export const createGroup = asyncHandler(async (req, res) => {
 
 export const getMyGroup = asyncHandler(async (req, res) => {
   const { _id: userId } = req.user;
-  const { groupId } = req.params;
 
-  const group = await Group.findById(groupId).populate("members.user", "name username");
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group).populate("members.profile", "username");
 
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   const isMember = group.members.some((member) => {
-    return member.user._id.toString() === userId.toString();
+    return member.profile._id.toString() === profile._id.toString();
   });
 
   if (!isMember) {
@@ -80,7 +88,7 @@ export const getGroupById = asyncHandler(async (req, res) => {
 
   const group = await Group.findById(groupId)
     .select("-notice")
-    .populate("members.user", "name username");
+    .populate("members.profile", "username");
 
   if (!group) {
     throw new ApiError(404, "Group not found");
@@ -94,7 +102,7 @@ export const getGroupById = asyncHandler(async (req, res) => {
 export const getGroups = asyncHandler(async (req, res) => {
   const groups = await Group.find({ $expr: { $lt: [{ $size: "$members" }, 4] } })
     .select("-notice")
-    .populate("members.user", "name username");
+    .populate("members.profile", "username");
 
   if (!groups) {
     throw new ApiError(404, "No groups found");
@@ -105,16 +113,27 @@ export const getGroups = asyncHandler(async (req, res) => {
 
 export const deleteGroup = asyncHandler(async (req, res) => {
   const { _id: userId, name } = req.user;
-  const { groupId } = req.params;
 
-  const group = await Group.findById(groupId);
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
 
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   const isGroupAdmin = group.members.some((member) => {
-    return member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN;
+    return (
+      member.profile.toString() === profile._id.toString() && member.role === UserRole.GROUP_ADMIN
+    );
   });
 
   if (!isGroupAdmin) {
@@ -125,15 +144,13 @@ export const deleteGroup = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cannot delete group with more than 1 member");
   }
 
-  const deletedGroup = await Group.deleteOne({ _id: groupId });
-
-  const profile = await Profile.findOne({ user: userId });
+  await Group.deleteOne({ _id: group._id });
 
   profile.group = undefined;
   await profile.save();
 
   const history = await History.create({
-    user: userId,
+    profile: profile._id,
     action: HistoryActions.GROUP_DELETED,
     message: `${name} deleted the group ${group.name}`,
   });
@@ -142,14 +159,25 @@ export const deleteGroup = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to create history record for group deletion");
   }
 
-  res.status(200).json(new ApiResponse(200, true, "Group deleted successfully", { deletedGroup }));
+  res.status(200).json(new ApiResponse(200, true, "Group deleted successfully"));
 });
 
 export const invite = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
-  const { userId, message } = req.body;
+  const { _id: userId } = req.user;
+  const { profileId } = req.params;
+  const { message } = req.body;
 
-  const group = await Group.findById(groupId);
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(404, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
 
   if (!group) {
     throw new ApiError(404, "Group not found");
@@ -159,15 +187,15 @@ export const invite = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Group is full. Cannot invite more members");
   }
 
-  const user = await User.findById(userId);
+  const newMemberProfile = await Profile.findById(profileId);
 
-  if (!user) {
+  if (!newMemberProfile) {
     throw new ApiError(404, "User not found");
   }
 
   const invite = await Request.create({
     group: group._id,
-    user: user._id,
+    profile: newMemberProfile._id,
     message,
     requestType: RequestType.INVITE_REQUEST,
   });
@@ -180,11 +208,22 @@ export const invite = asyncHandler(async (req, res) => {
 });
 
 export const getInvites = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { _id: userId } = req.user;
 
-  const invites = await Request.find({ group: groupId, requestType: RequestType.INVITE_REQUEST })
-    .populate("group", "name")
-    .populate("user", "name username");
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const invites = await Request.find({
+    group: profile.group,
+    requestType: RequestType.INVITE_REQUEST,
+  }).populate("profile", "username");
 
   if (!invites) {
     throw new ApiError(404, "No invites found");
@@ -194,11 +233,27 @@ export const getInvites = asyncHandler(async (req, res) => {
 });
 
 export const getRequests = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { _id: userId } = req.user;
 
-  const requests = await Request.find({ group: groupId, requestType: RequestType.JOIN_REQUEST })
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
+
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  const requests = await Request.find({ group: group._id, requestType: RequestType.JOIN_REQUEST })
     .populate("group", "name")
-    .populate("user", "name username");
+    .populate("profile", "username");
 
   if (!requests) {
     throw new ApiError(404, "No requests found");
@@ -227,8 +282,16 @@ export const approveJoinRequest = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group not found");
   }
 
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
   const isGroupAdmin = group.members.some((member) => {
-    return member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN;
+    return (
+      member.profile.toString() === profile._id.toString() && member.role === UserRole.GROUP_ADMIN
+    );
   });
 
   if (!isGroupAdmin) {
@@ -239,32 +302,26 @@ export const approveJoinRequest = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Group is full. Cannot approve join request");
   }
 
-  const user = await User.findById(request.user);
+  const newMemberProfile = await Profile.findById(request.profile).populate("user", "name");
 
-  if (!user) {
-    throw new ApiError(404, "User not found");
+  if (!newMemberProfile) {
+    throw new ApiError(404, "New member's Profile not found");
   }
 
-  group.members.push({ user: user._id });
+  group.members.push({ profile: newMemberProfile._id });
   await group.save();
 
-  const profile = await Profile.findOne({ user: user._id });
-
-  if (!profile) {
-    throw new ApiError(404, "Profile not found");
-  }
-
-  profile.group = group._id;
-  await profile.save();
+  newMemberProfile.group = group._id;
+  await newMemberProfile.save();
 
   request.status = RequestStatus.ACCEPTED;
   await request.save();
 
   const history = await History.create({
     group: group._id,
-    user: user._id,
+    profile: newMemberProfile._id,
     action: HistoryActions.MEMBER_ADDED,
-    message: `${user.name} join the group ${group.name}`,
+    message: `${newMemberProfile.name} join the group ${group.name}`,
   });
 
   if (!history) {
@@ -294,8 +351,12 @@ export const rejectJoinRequest = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Group not found");
   }
 
+  const profile = await Profile.findOne({ user: userId });
+
   const isGroupAdmin = group.members.some((member) => {
-    return member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN;
+    return (
+      member.profile.toString() === profile._id.toString() && member.role === UserRole.GROUP_ADMIN
+    );
   });
 
   if (!isGroupAdmin) {
@@ -309,26 +370,43 @@ export const rejectJoinRequest = asyncHandler(async (req, res) => {
 });
 
 export const removeMember = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
+  const { profileId } = req.params;
   const { _id: userId } = req.user;
-  const { memberUserId } = req.body;
 
-  const group = await Group.findById(groupId);
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
 
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   const isGroupAdmin = group.members.some((member) => {
-    return member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN;
+    return (
+      member.profile.toString() === profile._id.toString() && member.role === UserRole.GROUP_ADMIN
+    );
   });
 
   if (!isGroupAdmin) {
     throw new ApiError(403, "Only group admin can remove members");
   }
 
+  const memberProfile = await Profile.findById(profileId).populate("user", "name");
+
+  if (!memberProfile) {
+    throw new ApiError(404, "Member's profile not found");
+  }
+
   const isMember = group.members.some((member) => {
-    return member.user.toString() === memberUserId.toString();
+    return member.profile.toString() === memberProfile._id.toString();
   });
 
   if (!isMember) {
@@ -337,7 +415,7 @@ export const removeMember = asyncHandler(async (req, res) => {
 
   group.members.forEach((member) => {
     if (
-      member.user.toString() === memberUserId.toString() &&
+      member.profile.toString() === memberProfile._id.toString() &&
       member.role === UserRole.GROUP_ADMIN
     ) {
       throw new ApiError(400, "Cannot remove group admin");
@@ -345,24 +423,18 @@ export const removeMember = asyncHandler(async (req, res) => {
   });
 
   group.members = group.members.filter((member) => {
-    return member.user.toString() !== memberUserId.toString();
+    return member.profile.toString() !== memberProfile._id.toString();
   });
   await group.save();
 
-  const profile = await Profile.findOne({ user: memberUserId }).populate("user", "name");
-
-  if (!profile) {
-    throw new ApiError(404, "Profile not found");
-  }
-
-  profile.group = undefined;
-  await profile.save();
+  memberProfile.group = undefined;
+  await memberProfile.save();
 
   const history = await History.create({
     group: group._id,
-    user: memberUserId,
+    profile: memberProfile._id,
     action: HistoryActions.MEMBER_REMOVED,
-    message: `${profile.user.name} has been removed from the group ${group.name}`,
+    message: `${memberProfile.user.name} has been removed from the group ${group.name}`,
   });
 
   if (!history) {
@@ -373,33 +445,7 @@ export const removeMember = asyncHandler(async (req, res) => {
 });
 
 export const leftGroup = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
   const { _id: userId, name } = req.user;
-
-  const group = await Group.findById(groupId);
-
-  if (!group) {
-    throw new ApiError(404, "Group not found");
-  }
-
-  const isMember = group.members.some((member) => {
-    return member.user.toString() === userId.toString();
-  });
-
-  if (!isMember) {
-    throw new ApiError(404, "You are not a member of this group");
-  }
-
-  group.members.forEach((member) => {
-    if (member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN) {
-      throw new ApiError(400, "Group admin cannot leave the group");
-    }
-  });
-
-  group.members = group.members.filter((member) => {
-    return member.user.toString() !== userId.toString();
-  });
-  await group.save();
 
   const profile = await Profile.findOne({ user: userId });
 
@@ -407,12 +453,44 @@ export const leftGroup = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Profile not found");
   }
 
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
+
+  if (!group) {
+    throw new ApiError(404, "Group not found");
+  }
+
+  const isMember = group.members.some((member) => {
+    return member.profile.toString() === profile._id.toString();
+  });
+
+  if (!isMember) {
+    throw new ApiError(404, "You are not a member of this group");
+  }
+
+  group.members.forEach((member) => {
+    if (
+      member.profile.toString() === profile._id.toString() &&
+      member.role === UserRole.GROUP_ADMIN
+    ) {
+      throw new ApiError(400, "Group admin cannot leave the group");
+    }
+  });
+
+  group.members = group.members.filter((member) => {
+    return member.profile.toString() !== profile._id.toString();
+  });
+  await group.save();
+
   profile.group = undefined;
   await profile.save();
 
   const history = await History.create({
     group: group._id,
-    user: userId,
+    profile: profile._id,
     action: HistoryActions.MEMBER_LEFT,
     message: `${name} left the group ${group.name}`,
   });
@@ -425,18 +503,29 @@ export const leftGroup = asyncHandler(async (req, res) => {
 });
 
 export const updateNotice = asyncHandler(async (req, res) => {
-  const { groupId } = req.params;
   const { _id: userId } = req.user;
   const { notice } = req.body;
 
-  const group = await Group.findById(groupId);
+  const profile = await Profile.findOne({ user: userId });
+
+  if (!profile) {
+    throw new ApiError(404, "Profile not found");
+  }
+
+  if (!profile.group) {
+    throw new ApiError(400, "You are not a part of any group");
+  }
+
+  const group = await Group.findById(profile.group);
 
   if (!group) {
     throw new ApiError(404, "Group not found");
   }
 
   const isGroupAdmin = group.members.some((member) => {
-    return member.user.toString() === userId.toString() && member.role === UserRole.GROUP_ADMIN;
+    return (
+      member.profile.toString() === profile._id.toString() && member.role === UserRole.GROUP_ADMIN
+    );
   });
 
   if (!isGroupAdmin) {

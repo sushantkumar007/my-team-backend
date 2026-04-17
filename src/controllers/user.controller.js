@@ -13,7 +13,7 @@ import bcrypt from "bcryptjs";
 import Crypto from "crypto";
 
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, username } = req.body;
+  const { name, email, password } = req.body;
 
   const existingUser = await User.findOne({ email });
 
@@ -27,7 +27,7 @@ export const register = asyncHandler(async (req, res) => {
     throw new ApiError(400, "you are not a part of any course. please join a course first");
   }
 
-  const user = await User.create({ name, email, password, username });
+  const user = await User.create({ name, email, password });
 
   if (!user) {
     throw new ApiError(500, "Internal server error. Failed to register a user.");
@@ -47,6 +47,14 @@ export const register = asyncHandler(async (req, res) => {
 
   sendMail({ email, subject: "Please verify your email", text, html });
 
+  const userData = {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+  };
+
   res
     .status(201)
     .json(
@@ -54,7 +62,7 @@ export const register = asyncHandler(async (req, res) => {
         201,
         true,
         "User registered successfully. Please check your email to verify your account.",
-        { id: user._id, name: user.name, email: user.email, username: user.username },
+        { user: userData },
       ),
     );
 });
@@ -136,17 +144,17 @@ export const logout = asyncHandler(async (req, res) => {
 export const getCurrentUser = asyncHandler(async (req, res) => {
   const user = req.user;
 
-  res.status(200).json(
-    new ApiResponse(200, true, "User retrieved successfully", {
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-      },
-    }),
-  );
+  const userData = {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+  };
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, true, "User retrieved successfully", { user: userData }));
 });
 
 export const resendEmailVerification = asyncHandler(async (req, res) => {
@@ -225,6 +233,10 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   if (!user) {
     throw new ApiError(400, "Invalid password reset token");
+  }
+
+  if (user.resetPasswordExpiry < Date.now()) {
+    throw new ApiError(410, "Reset link has expired");
   }
 
   user.password = password;
