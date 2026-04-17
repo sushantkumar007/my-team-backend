@@ -3,9 +3,9 @@ import { RequestStatus, RequestStatusEnum, RequestTypeEnum } from "../utils/cons
 
 const requestSchema = new Schema(
   {
-    user: {
+    profile: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Profile",
       required: true,
     },
     group: {

@@ -2,6 +2,12 @@ import mongoose, { Schema } from "mongoose";
 
 const profileSchema = new Schema(
   {
+    username: {
+      type: String,
+      trim: true,
+      unique: true,
+      required: true,
+    },
     email: {
       type: String,
       trim: true,

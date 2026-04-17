@@ -11,9 +11,9 @@ const groupSchema = new mongoose.Schema(
     },
     members: [
       {
-        user: {
+        profile: {
           type: Schema.Types.ObjectId,
-          ref: "User",
+          ref: "Profile",
           required: true,
         },
         role: {
@@ -29,7 +29,7 @@ const groupSchema = new mongoose.Schema(
     ],
     createdBy: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Profile",
       required: true,
     },
     notice: {
