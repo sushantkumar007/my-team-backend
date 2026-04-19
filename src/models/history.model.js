@@ -3,9 +3,9 @@ import { HistoryActionsEnum } from "../utils/constant.js";
 
 const historySchema = new Schema(
   {
-    user: {
+    profile: {
       type: Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Profile",
     },
     group: {
       type: Schema.Types.ObjectId,

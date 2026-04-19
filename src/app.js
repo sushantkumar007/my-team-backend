@@ -21,7 +21,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   }),
 );
@@ -30,7 +30,7 @@ app.use(
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/profiles", profileRouter);
 app.use("/api/v1/groups", groupRouter);
-app.use("/healthcheck", healthcheckRouter);
+app.use("/api/v1/healthcheck", healthcheckRouter);
 
 // Error handler
 app.use(errorHandler);

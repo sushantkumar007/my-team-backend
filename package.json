@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "seed:admin": "node src/seed/admin.seed.js"
   },
   "lint-staged": {
     "*.js": [
@@ -40,6 +41,7 @@
     "csv-parser": "^3.2.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
     "mailgen": "^2.0.32",
     "mongoose": "^9.3.3",
